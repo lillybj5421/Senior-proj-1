@@ -1,0 +1,79 @@
+// For full API documentation, including code examples, visit http://wix.to/94BuAAs
+import wixLocation from 'wix-location';
+import wixData from 'wix-data';
+import wixUsers from 'wix-users';
+
+$w.onReady(function () {
+	//checking if user logged in if logged in offering log out 
+	if(wixUsers.currentUser.loggedIn){
+		$w("#loginButton").label = "Logout";
+		$w("#profileButton").show();
+	}
+	else { 
+		$w("#loginButton").label = "Login"; 
+		$w("#profileButton").hide();
+	}
+
+});
+
+
+export function loginButton_click(event) { 
+  // user is logged in
+  if(wixUsers.currentUser.loggedIn) {
+    // log the user out
+    wixUsers.logout()
+      .then( () => {
+        // update buttons accordingly
+        $w("#loginButton").label = "Login";
+        $w("#profileButton").hide();
+    } );
+  }
+  // user is logged out
+  else {
+    let userId;
+    let userEmail;
+  
+    // prompt the user to log in 
+    wixUsers.promptLogin( {"mode": "login"} )
+      .then( (user) => {
+        userId = user.id;
+        return user.getEmail();
+      } )
+      .then( (email) => {
+        // check if there is an item for the user in the collection
+        userEmail = email;
+        return wixData.query("Members")
+          .eq("_id", userId)
+          .find();
+      } )
+      .then( (results) => {
+        // if an item for the user is not found
+        if (results.items.length === 0) {
+          // create an item
+          const toInsert = {
+            "_id": userId,
+            "email": userEmail
+          };
+          // add the item to the collection
+          wixData.insert("Members", toInsert)
+            .catch( (err) => {
+              console.log(err);
+            } );
+        }
+        // update buttons accordingly
+        $w("#loginButton").label = "Logout";
+        $w("#profileButton").show();
+      } )
+      .catch( (err) => {
+        console.log(err);
+      } );
+  }
+
+	//Add your code for this event here: 
+}
+
+export function profileButton_click(event) {
+	wixLocation.to(`/Members/${wixUsers.currentUser.id}`);
+	console.log("clicked");
+	//Add your code for this event here: 
+}
